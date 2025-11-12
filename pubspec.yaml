@@ -5,40 +5,40 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  # Corregí la indentación aquí, esto es muy importante
-  sdk: '>=3.4.0 <4.0.0' # Un rango de SDK de Dart 3 válido
+  sdk: '>=3.4.0 <4.0.0'
 
 dependencies:
-  # Corregí la indentación de todas tus dependencias
   flutter:
     sdk: flutter
+
+  # --- INICIO DE LA CORRECCIÓN ---
+  # 'flutter_localizations' debe ir aquí, dentro de 'dependencies'
+  flutter_localizations:
+    sdk: flutter
+  # --- FIN DE LA CORRECCIÓN ---
 
   cupertino_icons: ^1.0.8
   supabase_flutter: ^2.10.3
   image_picker: ^1.2.0
   path_provider: ^2.1.5
+  table_calendar: ^3.2.0
+  intl: ^0.20.2
 
 dev_dependencies:
-  # Corregí la indentación y eliminé la versión duplicada
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0 # Usamos una versión estándar
-  flutter_launcher_icons: ^0.13.1 # Dejamos solo una versión aquí
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
 
-# Esta es la configuración para el generador de íconos.
-# Está en el nivel raíz (sin indentación), lo cual es correcto.
+# La configuración del ícono está bien aquí
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/imagenes/logo.png"
   min_sdk_android: 21
 
-# Esta es la configuración de Flutter.
+# La configuración de flutter está bien aquí
 flutter:
   uses-material-design: true
-
-  # ¡IMPORTANTE! 
-  # Debes "declarar" tu carpeta de assets para que Flutter la vea.
-  # Esto estaba faltando en tu archivo original.
   assets:
-    - assets/imagenes/ # Declara la carpeta de tu logo
+    - assets/imagenes/

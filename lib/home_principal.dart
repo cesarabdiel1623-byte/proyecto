@@ -1,8 +1,9 @@
 // lib/home_principal.dart
 import 'package:flutter/material.dart';
-import 'pagina_sucursales.dart'; // La página que ya tenías
-import 'pagina_citas.dart';       // La nueva página de citas
-import 'pagina_perfil.dart';      // La nueva página de perfil
+// ¡Importamos las nuevas páginas que vamos a crear!
+import 'pagina_calendario.dart';
+import 'pagina_gestion.dart';
+import 'pagina_perfil.dart'; // Esta ya la tenías
 
 class HomePrincipal extends StatefulWidget {
   @override
@@ -10,17 +11,15 @@ class HomePrincipal extends StatefulWidget {
 }
 
 class _HomePrincipalState extends State<HomePrincipal> {
-  // Índice para saber qué pestaña está seleccionada
   int _paginaActual = 0; 
 
-  // La lista de las 3 páginas que creamos
+  // ACTUALIZAMOS LA LISTA DE PÁGINAS
   final List<Widget> _paginas = [
-    PaginaSucursales(),
-    PaginaCitas(),
-    PaginaPerfil(),
+    PaginaCalendario(), // La nueva página principal
+    PaginaGestion(),    // La nueva página de ajustes
+    PaginaPerfil(),     // La página de perfil que ya teníamos
   ];
 
-  // Función que se llama cuando se toca una pestaña
   void _onTabTapped(int index) {
     setState(() {
       _paginaActual = index;
@@ -30,25 +29,24 @@ class _HomePrincipalState extends State<HomePrincipal> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // El cuerpo de la app será la página que esté seleccionada
       body: _paginas[_paginaActual],
 
-      // --- Aquí están las pestañas ---
+      // ACTUALIZAMOS LAS PESTAÑAS
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _paginaActual, // Marca el ícono seleccionado
-        onTap: _onTabTapped,       // Llama a nuestra función al tocar
+        currentIndex: _paginaActual,
+        onTap: _onTabTapped,
         items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.store_mall_directory),
-            label: 'Sucursales',
+            icon: Icon(Icons.calendar_today),
+            label: 'Calendario', // Antes: Sucursales
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'Mis Citas',
+            icon: Icon(Icons.store),
+            label: 'Gestión', // Antes: Mis Citas
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'Perfil',
+            label: 'Perfil', // Esta se queda igual
           ),
         ],
       ),

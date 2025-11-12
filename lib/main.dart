@@ -15,8 +15,8 @@ Future<void> main() async {
   await initializeDateFormatting('es_ES', null);
 
   await Supabase.initialize(
-    url: 'https://TU_PROYECTO_ID.supabase.co',
-    anonKey: 'TU_CLAVE_ANON',
+    url: 'https://mlbsfssnnbjpprmxchzo.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sYnNmc3NubmJqcHBybXhjaHpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU2MzM5NDAsImV4cCI6MjAzMTIwOTk0MH0.G21303-e3Bf_2aA-wT242-1i43p_3-enB4f_4b-e3Bf',
   );
   
   runApp(MyApp());

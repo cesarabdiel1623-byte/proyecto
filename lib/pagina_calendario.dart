@@ -45,7 +45,8 @@ class PaginaCalendario extends StatefulWidget {
 class _PaginaCalendarioState extends State<PaginaCalendario> {
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
-  CalendarFormat _calendarFormat = CalendarFormat.week; // Empezamos con vista semanal
+  CalendarFormat _calendarFormat =
+      CalendarFormat.week; // Empezamos con vista semanal
 
   // El Stream que escuchará los cambios en la tabla 'citas'
   Stream<List<CitaCompleta>>? _citasStream;
@@ -55,33 +56,34 @@ class _PaginaCalendarioState extends State<PaginaCalendario> {
     super.initState();
     _initializeStream();
   }
-  
+
   void _initializeStream() {
     // Escuchamos la tabla 'citas' en tiempo real
     _citasStream = supabase
         .from('citas')
         // Escucha en tiempo real CUALQUIER cambio (INSERT, UPDATE, DELETE)
-        .stream(primaryKey: ['id']) 
-        .asyncMap((data) async {
-          // Cuando hay un cambio, volvemos a pedir todas las citas
-          // del día seleccionado, pero con los datos de las otras tablas
-          
-          // Calculamos el inicio y fin del día seleccionado
-          final startOfDay = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
-          final endOfDay = startOfDay.add(Duration(days: 1));
-          
-          final citasData = await supabase
-              .from('citas')
-              // Pedimos datos de 'citas' y "unimos" los nombres de
-              // las tablas servicios, clientes_bot y empleados
-              .select('*, servicios(nombre), clientes_bot(nombre), empleados(nombre)')
-              // Filtramos por las citas del día seleccionado
-              .gte('fecha_hora_inicio', startOfDay.toIso8601String())
-              .lt('fecha_hora_inicio', endOfDay.toIso8601String())
-              .order('fecha_hora_inicio', ascending: true); // Ordenamos por hora
+        .stream(primaryKey: ['id']).asyncMap((data) async {
+      // Cuando hay un cambio, volvemos a pedir todas las citas
+      // del día seleccionado, pero con los datos de las otras tablas
 
-          return citasData.map((map) => CitaCompleta.fromMap(map)).toList();
-        });
+      // Calculamos el inicio y fin del día seleccionado
+      final startOfDay =
+          DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
+      final endOfDay = startOfDay.add(Duration(days: 1));
+
+      final citasData = await supabase
+          .from('citas')
+          // Pedimos datos de 'citas' y "unimos" los nombres de
+          // las tablas servicios, clientes_bot y empleados
+          .select(
+              '*, servicios(nombre), clientes_bot(nombre), empleados(nombre)')
+          // Filtramos por las citas del día seleccionado
+          .gte('fecha_hora_inicio', startOfDay.toIso8601String())
+          .lt('fecha_hora_inicio', endOfDay.toIso8601String())
+          .order('fecha_hora_inicio', ascending: true); // Ordenamos por hora
+
+      return citasData.map((map) => CitaCompleta.fromMap(map)).toList();
+    });
   }
 
   // Función que se llama cuando se toca un día en el calendario
@@ -107,7 +109,8 @@ class _PaginaCalendarioState extends State<PaginaCalendario> {
         children: [
           // --- ESTE ES EL CALENDARIO INTERACTIVO ---
           TableCalendar(
-            firstDay: DateTime.utc(2020, 1, 1),
+            firstDay: DateTime.utc(
+                DateTime.now().year, DateTime.now().month, DateTime.now().day),
             lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
             calendarFormat: _calendarFormat,
@@ -125,7 +128,7 @@ class _PaginaCalendarioState extends State<PaginaCalendario> {
               _focusedDay = focusedDay;
             },
           ),
-          
+
           Divider(thickness: 1),
 
           // --- ESTA ES LA LISTA DE CITAS EN TIEMPO REAL ---
@@ -139,7 +142,8 @@ class _PaginaCalendarioState extends State<PaginaCalendario> {
                 }
                 // Si hay un error
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error al cargar citas: ${snapshot.error}'));
+                  return Center(
+                      child: Text('Error al cargar citas: ${snapshot.error}'));
                 }
                 // Si no hay datos (lista vacía)
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -159,7 +163,8 @@ class _PaginaCalendarioState extends State<PaginaCalendario> {
                   itemBuilder: (context, index) {
                     final cita = citas[index];
                     // Formateamos la hora
-                    final horaInicio = DateFormat.jm().format(cita.fechaHoraInicio);
+                    final horaInicio =
+                        DateFormat.jm().format(cita.fechaHoraInicio);
                     final horaFin = DateFormat.jm().format(cita.fechaHoraFin);
 
                     return Card(
@@ -172,7 +177,8 @@ class _PaginaCalendarioState extends State<PaginaCalendario> {
                         ),
                         trailing: Text(
                           '$horaInicio - $horaFin',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, color: Colors.blue),
                         ),
                       ),
                     );

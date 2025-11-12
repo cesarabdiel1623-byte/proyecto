@@ -34,8 +34,18 @@ class _PaginaLoginState extends State<PaginaLogin> {
       
     } on AuthException catch (e) {
       if (mounted) {
+        // --- INICIO DE LA TRADUCCIÓN ---
+        String mensajeError = e.message; // Mensaje original
+
+        if (e.message.toLowerCase() == 'email not confirmed') {
+          mensajeError = 'Debes confirmar tu correo electrónico antes de iniciar sesión.';
+        } else if (e.message.toLowerCase() == 'invalid login credentials') {
+          mensajeError = 'Correo o contraseña incorrectos.';
+        }
+        // --- FIN DE LA TRADUCCIÓN ---
+
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error de login: ${e.message}'),
+          content: Text('Error de login: $mensajeError'), // Usamos el mensaje traducido
           backgroundColor: Colors.red,
         ));
       }
@@ -151,11 +161,11 @@ class _PaginaRegistroState extends State<PaginaRegistro> {
       final authResponse = await supabase.auth.signUp(
         email: email,
         password: password,
-        emailRedirectTo: 'io.supabase.flutterquickstart://login-callback/',
+        // --- ¡AÑADE ESTA LÍNEA 'DATA'! ---
+        // Pasa el nombre y la foto como metadatos
         data: {
-          'nombre': nombre,
-          'rol': rol,
-          'avatar_url': urlImagenSubida,
+          'nombre_completo': nombre,
+          'avatar_url': urlImagenSubida 
         },
       );
 
@@ -169,12 +179,22 @@ class _PaginaRegistroState extends State<PaginaRegistro> {
 
     } on AuthException catch (e) {
       if (mounted) {
+        // --- INICIO DE LA TRADUCCIÓN ---
+        String mensajeError = e.message; // Mensaje original
+
+        if (e.message.toLowerCase().contains('user already registered')) {
+          mensajeError = 'Este correo electrónico ya ha sido registrado.';
+        } else if (e.message.toLowerCase().contains('password should be at least 6 characters')) {
+          mensajeError = 'La contraseña debe tener al menos 6 caracteres.';
+        }
+        // --- FIN DE LA TRADUCCIÓN ---
+
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error de registro: ${e.message}'),
+          content: Text('Error de registro: $mensajeError'), // Usamos el mensaje traducido
           backgroundColor: Colors.red,
         ));
       }
-    } catch (e) {
+    }catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Un error inesperado ocurrió: $e'),
@@ -197,13 +217,25 @@ class _PaginaRegistroState extends State<PaginaRegistro> {
         child: ListView(
           children: [
             // --- Widget para la foto de perfil ---
+            // --- Widget para la foto de perfil ---
             Center(
               child: Column(
                 children: [
                   CircleAvatar(
                     radius: 50,
-                    backgroundImage: _imagenPerfil != null ? FileImage(_imagenPerfil!) : null,
-                    child: _imagenPerfil == null ? Icon(Icons.person, size: 50) : null,
+                    backgroundColor: Colors.grey[200], // Color de fondo
+                    // 1. Quitamos 'backgroundImage'
+                    // 2. Ponemos la lógica en el 'child'
+                    child: _imagenPerfil != null
+                        ? ClipOval( // 3. Usamos ClipOval
+                            child: Image.file(
+                              _imagenPerfil!,
+                              fit: BoxFit.contain, // 4. "Contener"
+                              width: 100,
+                              height: 100,
+                            ),
+                          )
+                        : Icon(Icons.person, size: 50, color: Colors.grey[600]),
                   ),
                   TextButton(
                     onPressed: _seleccionarImagen,

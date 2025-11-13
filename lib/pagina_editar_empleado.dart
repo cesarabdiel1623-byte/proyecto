@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'main.dart'; // Para supabase
+import 'pagina_mis_empleados.dart'; // Para la clase Empleado
 
 // --- Clase para manejar las sucursales ---
 class SucursalSimple {
@@ -11,7 +12,9 @@ class SucursalSimple {
 }
 
 class PaginaEditarEmpleado extends StatefulWidget {
-  PaginaEditarEmpleado();
+  final Empleado? empleado; // <-- AÑADIDO: Para recibir el empleado a editar
+
+  PaginaEditarEmpleado({this.empleado}); // Constructor actualizado
 
   @override
   _PaginaEditarEmpleadoState createState() => _PaginaEditarEmpleadoState();
@@ -20,11 +23,11 @@ class PaginaEditarEmpleado extends StatefulWidget {
 class _PaginaEditarEmpleadoState extends State<PaginaEditarEmpleado> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  
+  bool get _esModoEdicion => widget.empleado != null; // Para saber si editamos
+
   final _nombreController = TextEditingController();
   final _especialidadController = TextEditingController();
 
-  // --- NUEVAS VARIABLES PARA EL DROPDOWN ---
   List<SucursalSimple> _listaSucursales = [];
   int? _sucursalSeleccionadaId;
   bool _cargandoSucursales = true;
@@ -33,23 +36,25 @@ class _PaginaEditarEmpleadoState extends State<PaginaEditarEmpleado> {
   @override
   void initState() {
     super.initState();
+    // Si estamos editando, llenamos los campos iniciales
+    if (_esModoEdicion) {
+      _nombreController.text = widget.empleado!.nombre;
+      _especialidadController.text = widget.empleado!.especialidad;
+    }
     _cargarDatosIniciales();
   }
 
   Future<void> _cargarDatosIniciales() async {
+    setState(() => _cargandoSucursales = true);
     try {
-      // 1. Obtenemos el negocio_id del usuario logueado
       _negocioId = (await supabase
           .from('usuarios_perfiles')
           .select('negocio_id')
           .eq('id', supabase.auth.currentUser!.id)
           .single())['negocio_id'];
 
-      if (_negocioId == null) {
-        throw Exception('Usuario no vinculado a un negocio.');
-      }
-      
-      // 2. Buscamos las sucursales de ESE negocio
+      if (_negocioId == null) throw Exception('Usuario no vinculado a un negocio.');
+
       final data = await supabase
           .from('sucursales')
           .select('id, nombre')
@@ -59,60 +64,105 @@ class _PaginaEditarEmpleadoState extends State<PaginaEditarEmpleado> {
           .map((item) => SucursalSimple(id: item['id'], nombre: item['nombre']))
           .toList();
 
-      // 3. Si solo hay una sucursal, la seleccionamos por defecto
-      if (_listaSucursales.length == 1) {
+      // Si estamos editando, intentamos pre-seleccionar su sucursal
+      if (_esModoEdicion) {
+        // Buscamos el ID de la sucursal por su nombre
+        final sucursalDelEmpleado = _listaSucursales.firstWhere(
+          (s) => s.nombre == widget.empleado!.sucursalNombre,
+          orElse: () => _listaSucursales.isNotEmpty ? _listaSucursales.first : SucursalSimple(id: -1, nombre: ''),
+        );
+        if (sucursalDelEmpleado.id != -1) {
+          _sucursalSeleccionadaId = sucursalDelEmpleado.id;
+        }
+      } else if (_listaSucursales.length == 1) {
         _sucursalSeleccionadaId = _listaSucursales[0].id;
       }
 
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Error al cargar sucursales: $e'),
-        backgroundColor: Colors.red,
-      ));
+      _mostrarError('Error al cargar datos: $e');
     } finally {
-      setState(() => _cargandoSucursales = false);
+      if (mounted) setState(() => _cargandoSucursales = false);
     }
   }
 
   Future<void> _guardarEmpleado() async {
-    if (!_formKey.currentState!.validate()) return;
-    // Validamos que se haya seleccionado una sucursal
-    if (_sucursalSeleccionadaId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Por favor, selecciona una sucursal.'),
-        backgroundColor: Colors.red,
-      ));
+    if (!_formKey.currentState!.validate() || _sucursalSeleccionadaId == null) {
+      if (_sucursalSeleccionadaId == null) _mostrarError('Por favor, selecciona una sucursal.');
       return;
     }
 
     setState(() => _isLoading = true);
-
     try {
       final datos = {
         'nombre': _nombreController.text,
         'especialidad': _especialidadController.text,
         'negocio_id': _negocioId,
-        'sucursal_id': _sucursalSeleccionadaId, // ¡Usamos el ID seleccionado!
+        'sucursal_id': _sucursalSeleccionadaId,
       };
+      // Si es modo edición, añadimos el ID para que Supabase sepa cuál actualizar
+      if (_esModoEdicion) {
+        datos['id'] = widget.empleado!.id;
+      }
 
       await supabase.from('empleados').upsert(datos);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('¡Empleado guardado!'),
+          content: Text('¡Empleado ${_esModoEdicion ? 'actualizado' : 'guardado'}!'),
           backgroundColor: Colors.green,
         ));
-        Navigator.pop(context); // Regresa a la lista
+        Navigator.pop(context, true); // Regresa a la lista y avisa que hubo cambios
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error al guardar: $e'),
-          backgroundColor: Colors.red,
-        ));
-      }
+      _mostrarError('Error al guardar: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _eliminarEmpleado() async {
+    if (!_esModoEdicion) return;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirmar eliminación'),
+        content: Text('¿Estás seguro de que quieres eliminar a ${widget.empleado!.nombre}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      setState(() => _isLoading = true);
+      try {
+        await supabase.from('empleados').delete().eq('id', widget.empleado!.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Empleado eliminado'),
+            backgroundColor: Colors.orange,
+          ));
+          Navigator.pop(context, true); // Regresa y avisa que hubo cambios
+        }
+      } catch (e) {
+        _mostrarError('Error al eliminar: $e');
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _mostrarError(String mensaje) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(mensaje),
+        backgroundColor: Colors.red,
+      ));
     }
   }
 
@@ -120,7 +170,14 @@ class _PaginaEditarEmpleadoState extends State<PaginaEditarEmpleado> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Añadir Empleado'),
+        title: Text(_esModoEdicion ? 'Editar Empleado' : 'Añadir Empleado'),
+        actions: [
+          if (_esModoEdicion) // Mostramos el botón de borrar solo en modo edición
+            IconButton(
+              icon: Icon(Icons.delete),
+              onPressed: _eliminarEmpleado,
+            ),
+        ],
       ),
       body: _cargandoSucursales
           ? Center(child: CircularProgressIndicator())
@@ -142,7 +199,6 @@ class _PaginaEditarEmpleadoState extends State<PaginaEditarEmpleado> {
                   ),
                   SizedBox(height: 12),
                   
-                  // --- NUEVO DROPDOWN DE SUCURSAL ---
                   DropdownButtonFormField<int>(
                     value: _sucursalSeleccionadaId,
                     decoration: InputDecoration(labelText: 'Sucursal'),
@@ -164,7 +220,7 @@ class _PaginaEditarEmpleadoState extends State<PaginaEditarEmpleado> {
                       ? Center(child: CircularProgressIndicator())
                       : ElevatedButton(
                           onPressed: _guardarEmpleado,
-                          child: Text('Guardar Empleado'),
+                          child: Text(_esModoEdicion ? 'Guardar Cambios' : 'Crear Empleado'),
                         ),
                 ],
               ),

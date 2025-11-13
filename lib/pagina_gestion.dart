@@ -1,8 +1,8 @@
 // lib/pagina_gestion.dart
 import 'package:flutter/material.dart';
 import 'pagina_mis_servicios.dart';
-import 'pagina_mis_horarios.dart'; // Importamos el nuevo archivo
-import 'pagina_mis_empleados.dart'; // Importamos el nuevo archivo
+import 'pagina_mis_empleados.dart'; 
+import 'pagina_mis_sucursales.dart'; // <-- 1. Importamos la nueva página
 
 class PaginaGestion extends StatelessWidget {
   @override
@@ -14,7 +14,7 @@ class PaginaGestion extends StatelessWidget {
       body: ListView(
         padding: EdgeInsets.all(16.0),
         children: [
-          // Botón Mis Servicios (Este ya lo teníamos)
+          // Botón Mis Servicios
           ListTile(
             leading: Icon(Icons.content_cut),
             title: Text('Mis Servicios'),
@@ -28,27 +28,12 @@ class PaginaGestion extends StatelessWidget {
             },
           ),
           Divider(),
-          
-          // --- CONEXIÓN DE "MIS HORARIOS" ---
-          ListTile(
-            leading: Icon(Icons.access_time_filled),
-            title: Text('Mis Horarios'),
-            subtitle: Text('Define tus horas de trabajo para el bot'),
-            trailing: Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => PaginaMisHorarios()),
-              );
-            },
-          ),
-          Divider(),
-          
-          // --- CONEXIÓN DE "MIS EMPLEADOS" ---
+
+          // Botón Mis Empleados
           ListTile(
             leading: Icon(Icons.people),
             title: Text('Mis Empleados'),
-            subtitle: Text('Gestiona los empleados de tu sucursal'),
+            subtitle: Text('Gestiona los empleados y sus horarios'),
             trailing: Icon(Icons.chevron_right),
             onTap: () {
               Navigator.push(
@@ -57,6 +42,22 @@ class PaginaGestion extends StatelessWidget {
               );
             },
           ),
+          Divider(),
+
+          // --- 2. AQUÍ ESTÁ EL NUEVO BOTÓN "MIS SUCURSALES" ---
+          ListTile(
+            leading: Icon(Icons.store),
+            title: Text('Mis Sucursales'),
+            subtitle: Text('Añade o edita tus locales'),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PaginaMisSucursales()),
+              );
+            },
+          ),
+
         ],
       ),
     );

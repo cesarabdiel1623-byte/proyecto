@@ -1,22 +1,32 @@
+
 // lib/pagina_mis_empleados.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'main.dart'; // Para supabase
-import 'pagina_editar_empleado.dart'; // Importamos el formulario
+import 'pagina_editar_empleado.dart';
 
-// --- Creamos una clase para el Empleado ---
+// La clase Empleado ahora incluye 'sucursalNombre'
 class Empleado {
   final int id;
   final String nombre;
   final String especialidad;
+  final String sucursalNombre;
 
-  Empleado({required this.id, required this.nombre, required this.especialidad});
+  Empleado({
+    required this.id, 
+    required this.nombre, 
+    required this.especialidad,
+    required this.sucursalNombre
+  });
 
   factory Empleado.fromMap(Map<String, dynamic> map) {
     return Empleado(
       id: map['id'],
       nombre: map['nombre'] ?? 'Sin nombre',
       especialidad: map['especialidad'] ?? 'Sin especialidad',
+      sucursalNombre: (map['sucursales'] != null && map['sucursales']['nombre'] != null) 
+        ? map['sucursales']['nombre'] 
+        : 'Sin sucursal',
     );
   }
 }
@@ -27,7 +37,25 @@ class PaginaMisEmpleados extends StatefulWidget {
 }
 
 class _PaginaMisEmpleadosState extends State<PaginaMisEmpleados> {
-  late final Stream<List<Empleado>> _streamEmpleados;
+  // Cambiamos a Future para poder recargarlo
+  late Future<List<Empleado>> _futureEmpleados;
+
+  @override
+  void initState() {
+    super.initState();
+    _futureEmpleados = _cargarEmpleados();
+  }
+
+  Future<List<Empleado>> _cargarEmpleados() async {
+    final negocioId = await _getNegocioId();
+    final empleadosData = await supabase
+        .from('empleados')
+        .select('*, sucursales(nombre)')
+        .eq('negocio_id', negocioId)
+        .order('nombre', ascending: true);
+        
+    return empleadosData.map((map) => Empleado.fromMap(map)).toList();
+  }
 
   Future<String> _getNegocioId() async {
     final user = supabase.auth.currentUser;
@@ -43,21 +71,22 @@ class _PaginaMisEmpleadosState extends State<PaginaMisEmpleados> {
     return data['negocio_id'] as String;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    // Escuchamos la tabla 'empleados' en tiempo real
-    _streamEmpleados = supabase
-        .from('empleados')
-        .stream(primaryKey: ['id'])
-        .asyncMap((data) async {
-          final negocioId = await _getNegocioId();
-          final empleadosData = await supabase
-              .from('empleados')
-              .select()
-              .eq('negocio_id', negocioId);
-          return empleadosData.map((map) => Empleado.fromMap(map)).toList();
-        });
+  // --- Navegación y recarga ---
+  Future<void> _navegarAEditar([Empleado? empleado]) async {
+    // El '?? false' es por si el usuario simplemente desliza para atrás
+    final huboCambios = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaginaEditarEmpleado(empleado: empleado),
+      ),
+    ) ?? false;
+
+    // Si la página de edición nos dice que hubo cambios, recargamos la lista
+    if (huboCambios) {
+      setState(() {
+        _futureEmpleados = _cargarEmpleados();
+      });
+    }
   }
 
   @override
@@ -66,8 +95,8 @@ class _PaginaMisEmpleadosState extends State<PaginaMisEmpleados> {
       appBar: AppBar(
         title: Text('Mis Empleados'),
       ),
-      body: StreamBuilder<List<Empleado>>(
-        stream: _streamEmpleados,
+      body: FutureBuilder<List<Empleado>>(
+        future: _futureEmpleados,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -89,30 +118,18 @@ class _PaginaMisEmpleadosState extends State<PaginaMisEmpleados> {
                 child: ListTile(
                   leading: CircleAvatar(child: Icon(Icons.person)),
                   title: Text(empleado.nombre),
-                  subtitle: Text(empleado.especialidad),
-                  trailing: Icon(Icons.chevron_right),
-                  onTap: () {
-                    // Próximamente: Navegar a la página de detalles
-                    // de este empleado para ver sus HORARIOS
-                  },
+                  subtitle: Text('${empleado.especialidad} - ${empleado.sucursalNombre}'),
+                  trailing: Icon(Icons.edit), // Cambiado para reflejar la acción
+                  onTap: () => _navegarAEditar(empleado), // Navega para editar
                 ),
               );
             },
           );
         },
       ),
-      // --- EL BOTÓN '+' YA FUNCIONA ---
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.add),
-        onPressed: () {
-          // Navega al formulario
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PaginaEditarEmpleado(),
-            ),
-          );
-        },
+        onPressed: () => _navegarAEditar(), // Navega para crear
       ),
     );
   }

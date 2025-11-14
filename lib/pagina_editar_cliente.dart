@@ -18,9 +18,6 @@ class _PaginaEditarClienteState extends State<PaginaEditarCliente> {
 
   late final TextEditingController _nombreController;
   late final TextEditingController _telefonoController;
-  
-  // Este es el ID del chat de Telegram/Whatsapp. 
-  // Si es manual, podemos inventar uno.
   late final TextEditingController _chatIdController;
 
   @override
@@ -29,25 +26,38 @@ class _PaginaEditarClienteState extends State<PaginaEditarCliente> {
     _nombreController = TextEditingController(text: widget.cliente?.nombre);
     _telefonoController = TextEditingController(text: widget.cliente?.telefono);
     _chatIdController = TextEditingController(
-      // Si es un cliente manual, su chat_id puede ser su teléfono
       text: widget.cliente?.chat_id ?? ''
     );
   }
 
+  // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
   Future<void> _guardarCliente() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
     try {
+      // 1. Obtenemos el negocio_id del usuario logueado
+      final negocioId = (await supabase
+          .from('usuarios_perfiles')
+          .select('negocio_id')
+          .eq('id', supabase.auth.currentUser!.id)
+          .single())['negocio_id'];
+
+      if (negocioId == null) {
+        throw Exception('Usuario no vinculado a un negocio.');
+      }
+      
       final chatID = _chatIdController.text.isNotEmpty 
           ? _chatIdController.text 
-          : _telefonoController.text; // Usamos el tel. como ID si está vacío
+          // Si es manual y no hay ID, usamos el teléfono como ID único
+          : _telefonoController.text; 
 
       final datos = {
         'nombre': _nombreController.text,
         'telefono': _telefonoController.text,
         'chat_id': chatID,
         'plataforma': widget.cliente?.plataforma ?? 'manual',
+        'negocio_id': negocioId, // <-- 2. AÑADIMOS EL NEGOCIO_ID
         if (widget.cliente != null) 'id': widget.cliente!.id,
       };
 
@@ -68,9 +78,12 @@ class _PaginaEditarClienteState extends State<PaginaEditarCliente> {
         ));
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
+  // --- FIN DE LA CORRECCIÓN ---
 
   @override
   Widget build(BuildContext context) {
@@ -95,14 +108,16 @@ class _PaginaEditarClienteState extends State<PaginaEditarCliente> {
               keyboardType: TextInputType.phone,
             ),
             SizedBox(height: 12),
-            // Este campo es 'opcional' para el usuario, 
-            // lo manejamos internamente.
-            if (widget.cliente != null) // Solo mostar si editamos
+            
+            // Este campo solo es visible si estamos editando
+            // un cliente que vino del bot (ej. Telegram)
+            if (widget.cliente != null && widget.cliente!.plataforma != 'manual')
               TextFormField(
                 controller: _chatIdController,
                 decoration: InputDecoration(labelText: 'ID de Chat (Telegram/WA)'),
-                enabled: false,
+                enabled: false, // No se puede editar
               ),
+              
             SizedBox(height: 24),
             _isLoading
                 ? Center(child: CircularProgressIndicator())

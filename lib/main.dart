@@ -15,12 +15,10 @@ Future<void> main() async {
   await initializeDateFormatting('es_ES', null);
 
   await Supabase.initialize(
-    // 1. Esta URL es la correcta (la de tu proyecto Kyros)
+    // 1. Esta URL es la correcta
     url: 'https://giibrukztrwsxxtxfqrj.supabase.co',
 
-    // 2. ¡¡ERROR CORREGIDO!!
-    // Pega aquí tu llave 'anon' (la que empieza con 'eyJ...')
-    // ¡NO uses la llave 'sb_publishable_...'!
+    // 2. Esta es tu llave 'anon' que SÍ funciona
     anonKey: 'sb_publishable_IrsFjRQZB8wcTvVhLqKyjQ_fpNFrd64',
   );
 
@@ -34,12 +32,22 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Kyros Barber',
+      
+      // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
       theme: ThemeData(
-        primarySwatch: Colors.purple,
+        // 1. ESTA LÍNEA ACTIVA EL DISEÑO MODERNO (Material 3)
+        // Y ARREGLARÁ TU CALENDARIO.
+        useMaterial3: true, 
+        
+        // 2. Esta es la forma moderna de definir el color
+        // (Reemplaza a 'primarySwatch')
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple), 
+        
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
+      // --- FIN DE LA CORRECCIÓN ---
 
-      // Añade las líneas de localización para el calendario
+      // Líneas de localización para el calendario
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

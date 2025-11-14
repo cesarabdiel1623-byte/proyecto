@@ -7,7 +7,7 @@ import 'pagina_mis_servicios.dart'; // Para la clase Servicio
 import 'pagina_mis_empleados.dart'; // Para la clase Empleado
 import 'pagina_mis_clientes.dart';  // Para la clase ClienteBot
 
-// Clase para los datos de los 3 dropdowns
+// Clase DatosFormularioCita (sin cambios)
 class DatosFormularioCita {
   final List<Servicio> servicios;
   final List<Empleado> empleados;
@@ -16,8 +16,8 @@ class DatosFormularioCita {
 }
 
 class PaginaNuevaCita extends StatefulWidget {
-  final DateTime diaSeleccionado;
-  PaginaNuevaCita({required this.diaSeleccionado});
+  final DateTime? diaSeleccionado;
+  PaginaNuevaCita({this.diaSeleccionado});
 
   @override
   _PaginaNuevaCitaState createState() => _PaginaNuevaCitaState();
@@ -27,23 +27,23 @@ class _PaginaNuevaCitaState extends State<PaginaNuevaCita> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   
-  // Future para cargar los datos de los 3 dropdowns
   late final Future<DatosFormularioCita> _futureDatosFormulario;
   
-  // Variables para guardar la selección
   int? _servicioSeleccionadoId;
   int? _empleadoSeleccionadoId;
   int? _clienteSeleccionadoId;
   TimeOfDay? _horaInicioSeleccionada;
-  Servicio? _servicioSeleccionado; // Para saber la duración
+  Servicio? _servicioSeleccionado; 
+  DateTime? _fechaSeleccionada;
 
   @override
   void initState() {
     super.initState();
     _futureDatosFormulario = _cargarDatosFormulario();
+    _fechaSeleccionada = widget.diaSeleccionado;
   }
 
-  // Carga los datos de las 3 tablas en paralelo
+  // (La función _cargarDatosFormulario no tiene cambios)
   Future<DatosFormularioCita> _cargarDatosFormulario() async {
     try {
       final negocioId = (await supabase
@@ -51,23 +51,16 @@ class _PaginaNuevaCitaState extends State<PaginaNuevaCita> {
           .select('negocio_id')
           .eq('id', supabase.auth.currentUser!.id)
           .single())['negocio_id'] as String;
-
-      // Creamos 3 "tareas"
       final taskServicios = supabase.from('servicios').select().eq('negocio_id', negocioId);
       final taskEmpleados = supabase.from('empleados').select('*, sucursales(nombre)').eq('negocio_id', negocioId);
       final taskClientes = supabase.from('clientes_bot').select().eq('negocio_id', negocioId);
-
-      // Las ejecutamos al mismo tiempo
       final [dataServicios, dataEmpleados, dataClientes] = 
           await Future.wait([taskServicios, taskEmpleados, taskClientes]);
-
-      // Convertimos los resultados a nuestras clases
       return DatosFormularioCita(
         servicios: dataServicios.map((map) => Servicio.fromMap(map)).toList(),
         empleados: dataEmpleados.map((map) => Empleado.fromMap(map)).toList(),
         clientes: dataClientes.map((map) => ClienteBot.fromMap(map)).toList(),
       );
-
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -79,19 +72,48 @@ class _PaginaNuevaCitaState extends State<PaginaNuevaCita> {
     }
   }
   
+  // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
   Future<void> _seleccionarHora() async {
     final hora = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: 9, minute: 0),
+      
+      // ¡ESTA LÍNEA ES LA CORRECCIÓN DEFINITIVA!
+      // 'inputOnly' FUERZA el campo de texto y OCULTA el reloj feo.
+      initialEntryMode: TimePickerEntryMode.inputOnly, 
+      
+      builder: (BuildContext context, Widget? child) {
+        // Esto le dice al campo de texto que use AM/PM
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+          child: child!,
+        );
+      },
     );
     if (hora != null) {
       setState(() => _horaInicioSeleccionada = hora);
     }
   }
-  
+  // --- FIN DE LA CORRECCIÓN ---
+
+  // (La función _seleccionarFecha no tiene cambios)
+  Future<void> _seleccionarFecha() async {
+    final fecha = await showDatePicker(
+      context: context,
+      initialDate: _fechaSeleccionada ?? DateTime.now(),
+      firstDate: DateTime.now(), 
+      lastDate: DateTime.now().add(Duration(days: 365)),
+      locale: const Locale('es', 'ES'),
+    );
+    if (fecha != null) {
+      setState(() => _fechaSeleccionada = fecha);
+    }
+  }
+
+  // (La función _guardarCita no tiene cambios)
   Future<void> _guardarCita() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_servicioSeleccionado == null || _empleadoSeleccionadoId == null || _clienteSeleccionadoId == null || _horaInicioSeleccionada == null) {
+    if (_servicioSeleccionado == null || _empleadoSeleccionadoId == null || _clienteSeleccionadoId == null || _horaInicioSeleccionada == null || _fechaSeleccionada == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Por favor, completa todos los campos.'),
         backgroundColor: Colors.red,
@@ -102,7 +124,6 @@ class _PaginaNuevaCitaState extends State<PaginaNuevaCita> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Obtener datos del negocio y sucursal
       final negocioId = (await supabase
           .from('usuarios_perfiles')
           .select('negocio_id')
@@ -115,13 +136,11 @@ class _PaginaNuevaCitaState extends State<PaginaNuevaCita> {
           .eq('id', _empleadoSeleccionadoId!)
           .single())['sucursal_id'];
 
-      // 2. Calcular fechas y horas
-      final fecha = widget.diaSeleccionado;
+      final fecha = _fechaSeleccionada!;
       final hora = _horaInicioSeleccionada!;
       final fechaHoraInicio = DateTime(fecha.year, fecha.month, fecha.day, hora.hour, hora.minute);
       final fechaHoraFin = fechaHoraInicio.add(Duration(minutes: _servicioSeleccionado!.duracion));
 
-      // 3. Preparar los datos
       final datos = {
         'negocio_id': negocioId,
         'sucursal_id': sucursalId,
@@ -130,11 +149,10 @@ class _PaginaNuevaCitaState extends State<PaginaNuevaCita> {
         'cliente_id': _clienteSeleccionadoId,
         'fecha_hora_inicio': fechaHoraInicio.toIso8601String(),
         'fecha_hora_fin': fechaHoraFin.toIso8601String(),
-        'estado': 'confirmada', // Las citas manuales se confirman al instante
-        'creada_por': 'manual', // Creada por el barbero
+        'estado': 'confirmada',
+        'creada_por': 'manual',
       };
       
-      // 4. Insertar en la tabla 'citas'
       await supabase.from('citas').insert(datos);
 
       if (mounted) {
@@ -156,6 +174,7 @@ class _PaginaNuevaCitaState extends State<PaginaNuevaCita> {
     }
   }
 
+  // (El build() no tiene cambios)
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -174,8 +193,7 @@ class _PaginaNuevaCitaState extends State<PaginaNuevaCita> {
           if (!snapshot.hasData) {
             return Center(child: Text('No se pudieron cargar los datos.'));
           }
-
-          // ¡Tenemos los datos para los dropdowns!
+          
           final datosForm = snapshot.data!;
 
           return Form(
@@ -183,37 +201,28 @@ class _PaginaNuevaCitaState extends State<PaginaNuevaCita> {
             child: ListView(
               padding: EdgeInsets.all(16.0),
               children: [
-                // --- Selector de Cliente ---
                 DropdownButtonFormField<int>(
                   value: _clienteSeleccionadoId,
                   decoration: InputDecoration(labelText: 'Cliente'),
                   hint: Text('Selecciona un cliente'),
                   items: datosForm.clientes.map((cliente) {
-                    return DropdownMenuItem(
-                      value: cliente.id,
-                      child: Text(cliente.nombre),
-                    );
+                    return DropdownMenuItem(value: cliente.id, child: Text(cliente.nombre));
                   }).toList(),
                   onChanged: (value) => setState(() => _clienteSeleccionadoId = value),
                   validator: (val) => val == null ? 'Selecciona un cliente' : null,
                 ),
                 SizedBox(height: 12),
-
-                // --- Selector de Servicio ---
+                
                 DropdownButtonFormField<int>(
                   value: _servicioSeleccionadoId,
                   decoration: InputDecoration(labelText: 'Servicio'),
                   hint: Text('Selecciona un servicio'),
                   items: datosForm.servicios.map((servicio) {
-                    return DropdownMenuItem(
-                      value: servicio.id,
-                      child: Text(servicio.nombre),
-                    );
+                    return DropdownMenuItem(value: servicio.id, child: Text(servicio.nombre));
                   }).toList(),
                   onChanged: (value) {
                     setState(() {
                       _servicioSeleccionadoId = value;
-                      // Guardamos el objeto 'servicio' para saber su duración
                       _servicioSeleccionado = datosForm.servicios.firstWhere((s) => s.id == value);
                     });
                   },
@@ -221,30 +230,27 @@ class _PaginaNuevaCitaState extends State<PaginaNuevaCita> {
                 ),
                 SizedBox(height: 12),
 
-                // --- Selector de Empleado ---
                 DropdownButtonFormField<int>(
                   value: _empleadoSeleccionadoId,
                   decoration: InputDecoration(labelText: 'Empleado'),
                   hint: Text('Selecciona un empleado'),
                   items: datosForm.empleados.map((empleado) {
-                    return DropdownMenuItem(
-                      value: empleado.id,
-                      child: Text(empleado.nombre),
-                    );
+                    return DropdownMenuItem(value: empleado.id, child: Text(empleado.nombre));
                   }).toList(),
                   onChanged: (value) => setState(() => _empleadoSeleccionadoId = value),
                   validator: (val) => val == null ? 'Selecciona un empleado' : null,
                 ),
                 SizedBox(height: 12),
 
-                // --- Selector de Fecha (viene de la pág. anterior) ---
                 ListTile(
                   leading: Icon(Icons.calendar_today),
                   title: Text('Fecha'),
-                  subtitle: Text(DateFormat.yMMMMd('es_ES').format(widget.diaSeleccionado)),
+                  subtitle: Text(_fechaSeleccionada == null 
+                      ? 'No seleccionada' 
+                      : DateFormat.yMMMMd('es_ES').format(_fechaSeleccionada!)),
+                  onTap: _seleccionarFecha,
                 ),
 
-                // --- Selector de Hora ---
                 ListTile(
                   leading: Icon(Icons.access_time),
                   title: Text('Hora de Inicio'),

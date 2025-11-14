@@ -4,9 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart'; // Para formatear fechas
 import 'main.dart'; // Para supabase
+import 'pagina_nueva_cita.dart'; // Importamos el nuevo formulario
 
 // --- Creamos una clase para la Cita ---
-// (Es más compleja porque trae datos de otras tablas)
+// (Esta clase ya estaba perfecta)
 class CitaCompleta {
   final int id;
   final DateTime fechaHoraInicio;
@@ -110,11 +111,11 @@ class _PaginaCalendarioState extends State<PaginaCalendario> {
           // --- ESTE ES EL CALENDARIO INTERACTIVO ---
           TableCalendar(
             firstDay: DateTime.utc(
-                DateTime.now().year, DateTime.now().month, DateTime.now().day),
+                DateTime.now().year, DateTime.now().month, DateTime.now().day), // Corregido
             lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
             calendarFormat: _calendarFormat,
-            locale: 'es_ES', // (Necesitarás configurar la localización)
+            locale: 'es_ES', // (Esto ya funciona gracias a tu main.dart)
             selectedDayPredicate: (day) {
               return isSameDay(_selectedDay, day);
             },
@@ -189,11 +190,22 @@ class _PaginaCalendarioState extends State<PaginaCalendario> {
           ),
         ],
       ),
+      
+      // --- ¡AQUÍ ESTÁ LA ADAPTACIÓN! ---
+      // (Reemplazamos el 'print' por la navegación)
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.add),
         onPressed: () {
-          // Próximamente: Navegar a PaginaNuevaCitaManual()
-          print('Agendar cita manualmente');
+          // Navegamos al formulario y le pasamos el día
+          // que el usuario tiene seleccionado en el calendario
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaginaNuevaCita(
+                diaSeleccionado: _selectedDay,
+              ),
+            ),
+          );
         },
       ),
     );

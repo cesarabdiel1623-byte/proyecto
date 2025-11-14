@@ -2,7 +2,8 @@
 import 'package:flutter/material.dart';
 import 'pagina_mis_servicios.dart';
 import 'pagina_mis_empleados.dart'; 
-import 'pagina_mis_sucursales.dart'; // <-- 1. Importamos la nueva página
+import 'pagina_mis_sucursales.dart';
+import 'pagina_mis_clientes.dart'; // <-- 1. Importamos la nueva página
 
 class PaginaGestion extends StatelessWidget {
   @override
@@ -44,7 +45,7 @@ class PaginaGestion extends StatelessWidget {
           ),
           Divider(),
 
-          // --- 2. AQUÍ ESTÁ EL NUEVO BOTÓN "MIS SUCURSALES" ---
+          // Botón Mis Sucursales
           ListTile(
             leading: Icon(Icons.store),
             title: Text('Mis Sucursales'),
@@ -54,6 +55,21 @@ class PaginaGestion extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => PaginaMisSucursales()),
+              );
+            },
+          ),
+          Divider(),
+
+          // --- 2. AQUÍ ESTÁ EL NUEVO BOTÓN "MIS CLIENTES" ---
+          ListTile(
+            leading: Icon(Icons.contact_phone),
+            title: Text('Mis Clientes'),
+            subtitle: Text('Gestiona tu lista de clientes'),
+            trailing: Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PaginaMisClientes()),
               );
             },
           ),
